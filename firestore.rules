@@ -1,0 +1,100 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users collection
+    match /users/{userId} {
+      // Users can read their own data
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // Users can update their own profile (but not role or verification status)
+      allow update: if request.auth != null &&
+                   request.auth.uid == userId &&
+                   !('role' in request.resource.data) &&
+                   !('verification' in request.resource.data) &&
+                   !('stats' in request.resource.data);
+
+      // Only admins can create/delete users
+      allow create, delete: if request.auth != null &&
+                           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Events collection
+    match /events/{eventId} {
+      // Anyone can read published events
+      allow read: if request.auth != null;
+
+      // Only admins can create/update/delete events
+      allow create, update, delete: if request.auth != null &&
+                                   get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Attendance collection
+    match /attendance/{attendanceId} {
+      // Users can read their own attendance records
+      allow read: if request.auth != null &&
+                  request.auth.uid == resource.data.userId;
+
+      // Only admins can create/update/delete attendance records
+      allow create, update, delete: if request.auth != null &&
+                                   get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Badges collection
+    match /badges/{badgeId} {
+      // Anyone can read badges
+      allow read: if request.auth != null;
+
+      // Only admins can create/update/delete badges
+      allow create, update, delete: if request.auth != null &&
+                                   get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // User badges collection
+    match /userBadges/{userBadgeId} {
+      // Users can read their own badges
+      allow read: if request.auth != null &&
+                  request.auth.uid == resource.data.userId;
+
+      // Only admins can create/update/delete user badges
+      allow create, update, delete: if request.auth != null &&
+                                   get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Messages collection
+    match /messages/{messageId} {
+      // Users can read messages they sent or received
+      allow read: if request.auth != null &&
+                  (request.auth.uid == resource.data.senderId ||
+                   request.auth.uid == resource.data.receiverId);
+
+      // Users can create messages
+      allow create: if request.auth != null &&
+                    request.auth.uid == request.resource.data.senderId;
+
+      // Users can update their own messages (mark as read)
+      allow update: if request.auth != null &&
+                    request.auth.uid == resource.data.senderId;
+
+      // Only admins can delete messages
+      allow delete: if request.auth != null &&
+                    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Announcements collection
+    match /announcements/{announcementId} {
+      // Anyone can read announcements
+      allow read: if request.auth != null;
+
+      // Only admins can create/update/delete announcements
+      allow create, update, delete: if request.auth != null &&
+                                   get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Admin functions
+    match /admin/{document=**} {
+      // Only admins can access admin documents
+      allow read, write: if request.auth != null &&
+                         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+  }
+}
