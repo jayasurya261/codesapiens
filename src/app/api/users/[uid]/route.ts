@@ -4,10 +4,10 @@ import { requireAuth, requireAdmin } from '@/lib/auth-firebase';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { uid: string } }
+    { params }: { params: Promise<{ uid: string }> }
 ) {
     try {
-        const { uid } = params;
+        const { uid } = await params;
 
         const userDoc = await adminDb.collection('users').doc(uid).get();
 
@@ -37,10 +37,10 @@ export async function GET(
 
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { uid: string } }
+    { params }: { params: Promise<{ uid: string }> }
 ) {
     try {
-        const { uid } = params;
+        const { uid } = await params;
         const updateData = await request.json();
 
         // Remove fields that shouldn't be updated
@@ -74,10 +74,10 @@ export async function PATCH(
 
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { uid: string } }
+    { params }: { params: Promise<{ uid: string }> }
 ) {
     try {
-        const { uid } = params;
+        const { uid } = await params;
 
         const result = await adminDb.collection('users').doc(uid).delete();
 

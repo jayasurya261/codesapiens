@@ -30,16 +30,18 @@ import { User, Event, Analytics } from '@/types';
 import toast from 'react-hot-toast';
 
 export default function AdminDashboard() {
-    const { user, logout } = useAuth();
+    const { user, logout, loading } = useAuth();
     const router = useRouter();
     const [students, setStudents] = useState<User[]>([]);
     const [events, setEvents] = useState<Event[]>([]);
     const [analytics, setAnalytics] = useState<Analytics | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [dataLoading, setDataLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
 
     useEffect(() => {
+        if (loading) return;
+
         if (!user) {
             router.push('/');
             return;
@@ -51,7 +53,7 @@ export default function AdminDashboard() {
         }
 
         fetchAdminData();
-    }, [user, router]);
+    }, [user, loading, router]);
 
     const fetchAdminData = async () => {
         try {
@@ -78,7 +80,7 @@ export default function AdminDashboard() {
         } catch (error) {
             console.error('Error fetching admin data:', error);
         } finally {
-            setLoading(false);
+            setDataLoading(false);
         }
     };
 
@@ -124,7 +126,7 @@ export default function AdminDashboard() {
         return matchesSearch && matchesFilter;
     });
 
-    if (loading) {
+    if (loading || dataLoading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>

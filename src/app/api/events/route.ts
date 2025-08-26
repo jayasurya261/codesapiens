@@ -24,8 +24,10 @@ export async function GET(request: NextRequest) {
         // Apply search filter
         if (search) {
             const sanitizedSearch = search.trim().toLowerCase();
-            query = query.where('title', '>=', sanitizedSearch)
-                .where('title', '<=', sanitizedSearch + '\uf8ff') as any;
+            // Use range on title and order by title to avoid composite index with startDate
+            query = (query.where('title', '>=', sanitizedSearch)
+                .where('title', '<=', sanitizedSearch + '\uf8ff')
+                .orderBy('title', 'asc')) as any;
         }
 
         // Get total count
@@ -34,16 +36,38 @@ export async function GET(request: NextRequest) {
 
         // Apply pagination
         const offset = (page - 1) * limit;
-        const eventsSnapshot = await query
-            .orderBy('startDate', 'asc')
-            .offset(offset)
-            .limit(limit)
-            .get();
 
-        const events = eventsSnapshot.docs.map(doc => ({
-            _id: doc.id,
-            ...doc.data()
-        }));
+        let events: any[] = [];
+        const hasFilters = Boolean(status || type);
+
+        if (search) {
+            // Already ordered by title above; safe to paginate on server
+            const eventsSnapshot = await (query
+                .offset(offset)
+                .limit(limit)
+                .get());
+            events = eventsSnapshot.docs.map((doc: any) => ({ _id: doc.id, ...doc.data() }));
+        } else if (!hasFilters) {
+            // No filters: use server-side ordering by startDate
+            const eventsSnapshot = await (query
+                .orderBy('startDate', 'asc')
+                .offset(offset)
+                .limit(limit)
+                .get());
+            events = eventsSnapshot.docs.map((doc: any) => ({ _id: doc.id, ...doc.data() }));
+        } else {
+            // Filters present (equality on status/type). Avoid composite index by not ordering on server.
+            // Fetch a reasonable window, then sort/paginate in-memory.
+            const windowSize = Math.min(limit * page + 50, 500);
+            const snapshot = await query.limit(windowSize).get();
+            const all = snapshot.docs.map((doc: any) => ({ _id: doc.id, ...doc.data() }));
+            all.sort((a: any, b: any) => {
+                const aDate = a.startDate ? new Date(a.startDate).getTime() : 0;
+                const bDate = b.startDate ? new Date(b.startDate).getTime() : 0;
+                return aDate - bDate;
+            });
+            events = all.slice(offset, offset + limit);
+        }
 
         return NextResponse.json({
             success: true,

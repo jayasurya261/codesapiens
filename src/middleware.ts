@@ -19,14 +19,25 @@ export function middleware(request: NextRequest) {
     response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
     // Content Security Policy
+    // Allow Google's gapi and auth flows used by Firebase Auth (popup/redirect)
     response.headers.set(
         'Content-Security-Policy',
-        "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.gstatic.com https://www.googleapis.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com;"
+        [
+            "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.gstatic.com https://www.googleapis.com https://apis.google.com",
+            "style-src 'self' 'unsafe-inline'",
+            "img-src 'self' data: https:",
+            "font-src 'self' data:",
+            "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com",
+            "frame-src 'self' https://apis.google.com https://accounts.google.com https://my-portfolio-46069.firebaseapp.com/",
+            "frame-ancestors 'none'",
+        ].join('; ')
     );
 
     // Rate limiting for API routes
     if (request.nextUrl.pathname.startsWith('/api/')) {
-        const clientIP = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
+        const forwardedFor = request.headers.get('x-forwarded-for') || '';
+        const realIp = request.headers.get('x-real-ip');
+        const clientIP = (forwardedFor.split(',')[0] || realIp || 'unknown').trim();
         const now = Date.now();
 
         const clientData = rateLimitStore.get(clientIP);

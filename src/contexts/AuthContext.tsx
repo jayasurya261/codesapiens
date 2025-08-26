@@ -2,8 +2,10 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, signInWithGoogle } from '@/lib/firebase';
 import { User } from '@/types';
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 interface AuthContextType {
     user: User | null;
@@ -30,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
     const [loading, setLoading] = useState(true);
+    const router = useRouter();
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -119,14 +122,77 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const loginWithGoogle = async () => {
         try {
-            const response = await fetch('/api/auth/google', {
-                method: 'POST',
-            });
+            setLoading(true);
+            const { user, error } = await signInWithGoogle();
 
-            const result = await response.json();
-            return result;
+            if (error || !user) {
+                toast.error('Google login failed');
+                return { success: false, error: 'Google login failed' };
+            }
+
+            // Check if user exists in Firestore
+            const response = await fetch(`/api/users/${user.uid}`);
+            if (response.ok) {
+                const userData = await response.json();
+                setUser(userData.data);
+                toast.success('Login successful!');
+                router.push('/dashboard');
+                return { success: true, user: userData.data };
+            } else {
+                // User doesn't exist, create them in Firestore
+                const newUser: User = {
+                    uid: user.uid,
+                    email: user.email || '',
+                    displayName: user.displayName || '',
+                    phoneNumber: undefined,
+                    role: 'student',
+                    profile: {
+                        college: '',
+                        skills: [],
+                        linkedinUrl: undefined,
+                        githubUrl: undefined,
+                        portfolioUrl: undefined,
+                        bio: undefined,
+                        avatar: user.photoURL || undefined,
+                    },
+                    verification: {
+                        emailVerified: user.emailVerified,
+                        phoneVerified: false,
+                        adminApproved: false, // Students need admin approval
+                    },
+                    stats: {
+                        points: 0,
+                        sessionsAttended: 0,
+                        badgesEarned: 0,
+                        volunteeringHours: 0,
+                    },
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                };
+
+                // Create user in Firestore via API
+                const createResponse = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newUser),
+                });
+
+                if (createResponse.ok) {
+                    setUser(newUser);
+                    toast.success('Account created successfully! Please wait for admin approval.');
+                    router.push('/dashboard');
+                    return { success: true, user: newUser };
+                } else {
+                    toast.error('Failed to create user account');
+                    return { success: false, error: 'Failed to create user account' };
+                }
+            }
         } catch (error) {
+            console.error('Google login error:', error);
+            toast.error('Google login failed');
             return { success: false, error: 'Google login failed' };
+        } finally {
+            setLoading(false);
         }
     };
 

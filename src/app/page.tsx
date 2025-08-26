@@ -64,8 +64,8 @@ export default function HomePage() {
         try {
             const result = await loginWithGoogle();
             if (result.success) {
-                toast.success('Google login successful!');
-                router.push('/dashboard');
+                // Success handling is done in the AuthContext
+                // No need to redirect here as it's handled in the context
             } else {
                 toast.error(result.error || 'Google login failed');
             }

@@ -28,7 +28,7 @@ export async function requireAuth(request: NextRequest): Promise<NextResponse | 
         }
 
         // Get user data from Firestore
-        const userResult = await getUserData(tokenResult.uid);
+        const userResult = await getUserData(tokenResult.uid as string);
 
         if (!userResult.success) {
             return NextResponse.json(
@@ -40,7 +40,7 @@ export async function requireAuth(request: NextRequest): Promise<NextResponse | 
         const userData = userResult.data;
 
         // Check if user is approved (for students)
-        if (userData.role === 'student' && !userData.verification?.adminApproved) {
+        if (userData?.role === 'student' && !userData?.verification?.adminApproved) {
             return NextResponse.json(
                 { success: false, error: 'Account pending approval' },
                 { status: 403 }
@@ -67,6 +67,7 @@ export async function requireAdmin(request: NextRequest): Promise<NextResponse |
     // First check authentication
     const authError = await requireAuth(request);
     if (authError) return authError;
+    console.log((request as any).user);
 
     // Then check admin role
     const user = (request as any).user;
