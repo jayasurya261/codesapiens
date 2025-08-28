@@ -59,9 +59,11 @@ export default function AdminDashboard() {
         try {
             // Fetch students
             const studentsResponse = await fetch('/api/users?role=student');
+            
             if (studentsResponse.ok) {
                 const studentsData = await studentsResponse.json();
                 setStudents(studentsData.data || []);
+                console.log(studentsData.data)
             }
 
             // Fetch events
