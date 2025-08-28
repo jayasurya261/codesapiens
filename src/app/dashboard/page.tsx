@@ -32,6 +32,7 @@ export default function StudentDashboard() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        console.log('User data:', user);
         if (!user) {
             router.push('/');
             return;
@@ -93,6 +94,7 @@ export default function StudentDashboard() {
     }
 
     if (!user) return null;
+    console.log(user)
 
     return (
         <div className="min-h-screen bg-gray-50">

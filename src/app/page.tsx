@@ -23,6 +23,7 @@ export default function HomePage() {
 
     const { login, signup, loginWithGoogle, user } = useAuth();
     const router = useRouter();
+    
 
     // Redirect if already authenticated
     if (user) {
@@ -37,11 +38,14 @@ export default function HomePage() {
         try {
             if (isLogin) {
                 const result = await login(formData.email, formData.password);
+                console.log(result);
                 if (result.success) {
                     toast.success('Login successful!');
                     router.push('/dashboard');
+                    console.log('User logged in, redirecting to dashboard...');
                 } else {
                     toast.error(result.error || 'Login failed');
+                    
                 }
             } else {
                 const result = await signup(formData.email, formData.password, formData.displayName);

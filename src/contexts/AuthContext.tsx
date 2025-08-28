@@ -91,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const login = async (email: string, password: string) => {
+        console.log("Hello");
         try {
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
@@ -99,6 +100,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
 
             const result = await response.json();
+            console.log(result);
+            setUser(result.data || null);
+            console.log('setUser called'+user);  
             return result;
         } catch (error) {
             return { success: false, error: 'Login failed' };

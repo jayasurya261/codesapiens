@@ -4,8 +4,8 @@ import { adminDb } from '@/lib/firebase-admin';
 
 export async function POST(request: NextRequest) {
     try {
+        console.log("Login attempt")
         const { email, password } = await request.json();
-
         if (!email || !password) {
             return NextResponse.json(
                 { success: false, error: 'Email and password are required' },
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
         // Authenticate with Firebase
         const { user, error } = await signInWithEmail(email, password);
-
+        console.log("test");
         if (error || !user) {
             return NextResponse.json(
                 { success: false, error: 'Invalid credentials' },
@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
 
         // Check if user exists in Firestore
         const userDoc = await adminDb.collection('users').doc(user.uid).get();
+        console.log(userDoc);
 
         if (!userDoc.exists) {
             return NextResponse.json(
@@ -58,6 +59,8 @@ export async function POST(request: NextRequest) {
                 email: user.email,
                 displayName: user.displayName,
                 role: userData.role,
+                profileComplete: userData.profileComplete,
+                stats: userData.stats || 0,
             }
         });
 
